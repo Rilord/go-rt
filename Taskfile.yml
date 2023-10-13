@@ -1,0 +1,12 @@
+version: '3'
+
+tasks:
+  build:
+    description: build go-rt
+    cmds:
+      - go build -o cmd/go-rt
+  run:
+    deps: [build]
+    description: run go-rt
+    cmds:
+      - ./cmd/go-rt
