@@ -1,4 +1,4 @@
-package worker
+package concurrent
 
 import (
 	"context"
@@ -23,6 +23,11 @@ const (
 	PoolStateShutdown
 )
 
+type PoolConfig struct {
+	TaskQueueSize     int
+	WorkerConcurrency int
+}
+
 type Pool struct {
 	parentCtx context.Context
 	ctx       context.Context
@@ -44,7 +49,7 @@ type Pool struct {
 func (p *Pool) setState(state PoolState) {
 	p.mx.Lock()
 	defer p.mx.Unlock()
-	p.SetStateUnsafe(state)
+	p.setStateUnsafe(state)
 }
 
 func (p *Pool) GetState() PoolState {
@@ -57,7 +62,7 @@ func (p *Pool) getStateUnsafe() PoolState {
 	return p.state
 }
 
-func (p *Pool) SetStateUnsafe(state PoolState) {
+func (p *Pool) setStateUnsafe(state PoolState) {
 	p.state = state
 }
 
@@ -69,7 +74,7 @@ func (p *Pool) RunBackGround(extId uint) (err error) {
 	p.mx.Lock()
 
 	if p.state == PoolStateNew {
-		p.SetStateUnsafe(PoolStateBgRunning)
+		p.setStateUnsafe(PoolStateBgRunning)
 		p.isBackground = true
 	} else {
 		p.mx.Unlock()
@@ -86,7 +91,7 @@ func (p *Pool) RunBackGround(extId uint) (err error) {
 		if r := recover(); r != nil {
 			p.mx.Lock()
 			defer p.mx.Unlock()
-			p.SetStateUnsafe(PoolStateRecoverErr)
+			p.setStateUnsafe(PoolStateRecoverErr)
 			_ = p.shutdownUnsafe(PoolShutdownHard)
 		}
 
@@ -123,7 +128,7 @@ func (p *Pool) RunBackGround(extId uint) (err error) {
 	}
 }
 
-func NewPool(parentCtx context.Context, externalId uint64, name string) (*Pool, error) {
+func NewPool(parentCtx context.Context, externalId uint64, name string, cfg *PoolConfig) (*Pool, error) {
 
 	if parentCtx == nil {
 		return nil, errors.New("parent ctx is Nil")
@@ -131,8 +136,8 @@ func NewPool(parentCtx context.Context, externalId uint64, name string) (*Pool, 
 
 	var pool = Pool{
 		parentCtx:         parentCtx,
-		workerConcurrency: 12,
-		taskQueueSize:     128,
+		workerConcurrency: cfg.WorkerConcurrency,
+		taskQueueSize:     cfg.TaskQueueSize,
 	}
 
 	pool.setState(PoolStateNew)
@@ -194,10 +199,10 @@ func (p *Pool) shutdownUnsafe(shutdownMode PoolShutdownMode) (err error) {
 			if r := recover(); r != nil {
 			}
 
-			p.SetStateUnsafe(PoolStateShutdown)
+			p.setStateUnsafe(PoolStateShutdown)
 		}()
 
-		p.SetStateUnsafe(PoolStateShuttingDown)
+		p.setStateUnsafe(PoolStateShuttingDown)
 		if p.isBackground {
 			close(p.taskQueueCh)
 		}
@@ -242,4 +247,25 @@ func (p *Pool) stopWorkersUnsafe(shutdownMode PoolShutdownMode) {
 
 		time.Sleep(time.Millisecond + 10)
 	}
+}
+
+func (p *Pool) Stop(shutdownMode PoolShutdownMode) error {
+	if p == nil {
+		return errors.New("")
+	}
+
+	p.mx.Lock()
+	defer p.mx.Unlock()
+
+	if p.state != PoolStateShutdown && p.state != PoolStateShuttingDown {
+		err := p.shutdownUnsafe(shutdownMode)
+
+		if p.stopCh != nil {
+			p.stopCh <- true
+			close(p.stopCh)
+		}
+		return err
+	}
+
+	return nil
 }

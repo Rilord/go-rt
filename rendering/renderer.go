@@ -8,8 +8,19 @@ import (
 	"github.com/Rilord/go-rt/types"
 )
 
+type TileState uint32
+
+const (
+	TileStateReadyToRender = iota
+	TileStateRendering
+	TlieStateFinished
+)
+
 type RenderTile struct {
-	X, Y int
+	Width, Height uint32
+	Begin, End    types.Coord
+	X, Y          int
+	Index         uint32
 }
 
 type RenderState struct {
@@ -33,6 +44,9 @@ func NewRenderer(scene *Scene, state *RenderState) *Renderer {
 type Renderer struct {
 	*Scene
 	State *RenderState
+}
+
+func (r *Renderer) NextTile() *RenderTile {
 }
 
 func RenderPixelFn(parentCtx context.Context, ctx context.Context, data ...interface{}) (error, []interface{}) {

@@ -1,4 +1,4 @@
-package worker
+package concurrent
 
 import (
 	"context"
@@ -34,13 +34,13 @@ type Worker struct {
 	mx            sync.RWMutex
 }
 
-func (wr *Worker) SetState(state WorkerState) {
+func (wr *Worker) setState(state WorkerState) {
 	wr.mx.Lock()
 	defer wr.mx.Unlock()
-	wr.SetStateUnsafe(state)
+	wr.setStateUnsafe(state)
 }
 
-func (wr *Worker) SetStateUnsafe(state WorkerState) {
+func (wr *Worker) setStateUnsafe(state WorkerState) {
 	wr.state = state
 }
 
@@ -63,7 +63,7 @@ func NewWorker(parentCtx context.Context, pool *Pool, taskQueueCh <-chan *Task, 
 		errCh:       errCh,
 	}
 
-	worker.SetState(WorkerStateNew)
+	worker.setState(WorkerStateNew)
 
 	return &worker
 }
@@ -73,7 +73,7 @@ func (w *Worker) Run(wg *sync.WaitGroup) {
 	defer w.mx.Unlock()
 
 	if w.state == WorkerStateNew || w.state == WorkerStateRecoverErr {
-		w.SetStateUnsafe(WorkerStateIdle)
+		w.setStateUnsafe(WorkerStateIdle)
 	} else {
 		w.errCh <- errors.New("Wrong state")
 	}
@@ -83,7 +83,7 @@ func (w *Worker) Run(wg *sync.WaitGroup) {
 	defer func() {
 		if r := recover(); r != nil {
 		} else {
-			w.SetStateUnsafe(WorkerStateTerminated)
+			w.setStateUnsafe(WorkerStateTerminated)
 		}
 
 		if wg != nil {
@@ -107,18 +107,18 @@ func (w *Worker) Run(wg *sync.WaitGroup) {
 		case task, ok := <-w.taskQueueCh:
 			if ok {
 				if task != nil {
-					w.SetStateUnsafe(WorkerStateWorking)
+					w.setStateUnsafe(WorkerStateWorking)
 					w.taskInProcess = task
 					task.Process(w.id)
-					w.SetStateUnsafe(WorkerStateIdle)
+					w.setStateUnsafe(WorkerStateIdle)
 				}
 			} else {
-				w.SetStateUnsafe(WorkerStateTerminatingTaskChClosed)
+				w.setStateUnsafe(WorkerStateTerminatingTaskChClosed)
 				return
 			}
 		case _, ok := <-w.stopCh:
 			if ok {
-				w.SetStateUnsafe(WorkerStateTerminatingStopSignal)
+				w.setStateUnsafe(WorkerStateTerminatingStopSignal)
 			} else {
 			}
 		case <-w.parentCtx.Done():

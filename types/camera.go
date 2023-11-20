@@ -1,8 +1,16 @@
 package types
 
 type Camera struct {
-	FocalLength    float64
-	ViewportHeight float64
-	ViewportWidth  float64
-	Center         *Vec3
+	FOV           float64
+	FocalLength   float64
+	FocalDistance float64
+	Position      *Vec3
+	AspectRation  float64
+
+	Up, Right *Vec3
+	LookAt    *Vec3
+	Forward   *Vec3
+
+	Height float64
+	Width  float64
 }

@@ -1,17 +1,17 @@
 package rendering
 
-import "github.com/Rilord/go-rt/types"
+import (
+	"io"
+
+	"github.com/Rilord/go-rt/accelerators"
+	"github.com/Rilord/go-rt/types"
+)
 
 type Scene struct {
-	Pixel00Loc   *types.Vec3
-	PixelDeltaUV *types.UV
-	Camera       *types.Camera
+	TopLevel *accelerators.BVH
+	Meshes   []*types.Mesh
+	Cameras  []*types.Camera
 }
 
-func NewScene(pixel00Loc *types.Vec3, pixelDeltaUV *types.UV, camera *types.Camera) *Scene {
-	return &Scene{
-		Pixel00Loc:   pixel00Loc,
-		PixelDeltaUV: pixelDeltaUV,
-		Camera:       camera,
-	}
+func LoadScene(r *Renderer, io *io.ByteReader) *Scene {
 }

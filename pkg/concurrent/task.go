@@ -1,4 +1,4 @@
-package worker
+package concurrent
 
 import (
 	"context"
@@ -47,15 +47,15 @@ func (t *Task) SetWgUnsafe(wg *sync.WaitGroup) {
 	t.wg = wg
 }
 
-func (t *Task) SetStateUnsafe(state TaskState) {
+func (t *Task) setStateUnsafe(state TaskState) {
 	t.prevState = t.state
 	t.state = state
 }
 
-func (ts *Task) SetState(state TaskState) {
+func (ts *Task) setState(state TaskState) {
 	ts.mx.Lock()
 	defer ts.mx.Unlock()
-	ts.SetStateUnsafe(state)
+	ts.setStateUnsafe(state)
 }
 
 func (t *Task) GetError() error {
@@ -90,7 +90,7 @@ func (t *Task) Process(workerId uint) {
 	}()
 
 	t.err, t.results = t.f(t.parentCtx, t.ctx, t.requests...)
-	t.SetStateUnsafe(TaskStateDoneSuccess)
+	t.setStateUnsafe(TaskStateDoneSuccess)
 	return
 }
 
@@ -115,7 +115,7 @@ func NewTask(parentCtx context.Context, tp *TaskPool, name string, doneCh chan<-
 
 		task.f = f
 
-		task.SetStateUnsafe(TaskStateReady)
+		task.setStateUnsafe(TaskStateReady)
 	}
 
 	return task

@@ -4,9 +4,9 @@ tasks:
   build:
     description: build go-rt
     cmds:
-      - go build -o cmd/go-rt
+      - go build -o gort cmd/gort/main.go
   run:
     deps: [build]
     description: run go-rt
     cmds:
-      - ./cmd/go-rt
+      - ./gort

@@ -1,4 +1,4 @@
-package worker
+package concurrent
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func NewTaskPool() *TaskPool {
 				task := new(Task)
 				task.stopCh = make(chan interface{}, 1)
 				task.ctx, task.cancel = context.WithCancel(context.Background())
-				task.SetStateUnsafe(TaskStateNew)
+				task.setStateUnsafe(TaskStateNew)
 				return task
 			},
 		},
@@ -35,7 +35,7 @@ func (p *TaskPool) GetTask() *Task {
 	atomic.AddUint64(&countGet, 1)
 	task := p.Pool.Get().(*Task)
 	if task.state != TaskStateNew {
-		task.SetStateUnsafe(TaskStatePoolGet)
+		task.setStateUnsafe(TaskStatePoolGet)
 	}
 	return task
 }
@@ -45,7 +45,7 @@ func (p *TaskPool) putTask(task *Task) {
 		atomic.AddUint64(&countPut, 1)
 		task.requests = nil
 		task.results = nil
-		task.SetState(TaskStatePoolPut)
+		task.setState(TaskStatePoolPut)
 		p.Pool.Put(task)
 	}
 }

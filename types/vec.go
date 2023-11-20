@@ -77,7 +77,7 @@ func (v *Vec3) Unit() *Vec3 {
 	return v.Scale(1 / v.Len())
 }
 
-type Point Vec3
+type Coord Vec3
 
 type UV struct {
 	U, V *Vec3
